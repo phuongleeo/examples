@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "redis.name" . }}-slave
+  labels:
+    {{- include "guestbook-go.labels" . | nindent 4 }}
+    component: redis
+    role: slave
+spec:
+  type: {{ .Values.redis.service.type }}
+  ports:
+    - port: {{ .Values.redis.service.port }}
+      targetPort: redis-server
+      protocol: TCP
+      name: redis-server
+  selector:
+    {{- include "guestbook-go.selectorLabels" . | nindent 4 }}
+    component: redis
+    role: slave
+

@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "redis.name" . }}-master
+  labels:
+    {{- include "guestbook-go.labels" . | nindent 4 }}
+    component: redis
+    role: master
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.redis.replicaMaster }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "guestbook-go.selectorLabels" . | nindent 6 }}
+      component: redis
+      role: master
+  template:
+    metadata:
+    {{- with .Values.guestbook.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "guestbook-go.selectorLabels" . | nindent 8 }}
+        component: redis
+        role: master
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "guestbook-go.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-redis-master
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- $redis_default := .Chart.AppVersion -}}  
+          {{- with .Values.redis.image.master }}
+          image: "{{ .repository }}:{{ .tag | default $redis_default }}"
+          {{- end }}
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+          ports:
+            - name: redis-server
+              containerPort: 6379
+              protocol: TCP
+          {{- toYaml .Values.redis.healthcheck | nindent 10 }}
+          {{- if .Values.resources }}
+          {{- with .Values.resources }}    
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}  
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
